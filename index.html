@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Emoji Planner for Autism (Refined Layout)</title>
+  <title>Emoji Planner for Autism (Error-Fixed)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <style>
     /* 
@@ -30,7 +30,6 @@
       =========================================================
       ===============  CLOUD BACKGROUND ANIMATION  ============
       =========================================================
-      We'll create a dark blue gradient sky with drifting clouds.
     */
     body {
       /* For iPhones with notches (iPhone X+), use safe-area insets to ensure content isn't hidden. */
@@ -51,7 +50,6 @@
       overflow: hidden;
       pointer-events: none; 
     }
-
     .cloud {
       position: absolute;
       top: 0;
@@ -61,17 +59,10 @@
       opacity: 0.7;
       animation: driftClouds 60s linear infinite;
     }
-
     @keyframes driftClouds {
-      0% {
-        transform: translateX(-20%) translateY(10%);
-      }
-      100% {
-        transform: translateX(120%) translateY(10%);
-      }
+      0%   { transform: translateX(-20%) translateY(10%); }
+      100% { transform: translateX(120%) translateY(10%); }
     }
-
-    /* We can vary the animation speed & initial positions by using nth-child or inline style. */
     .cloud:nth-child(1) {
       top: 20%; 
       left: -25%;
@@ -106,7 +97,6 @@
       min-height: 100vh;
       padding-bottom: 2rem; /* space for bottom safe area on iPhone */
     }
-
     .content {
       display: flex;
       flex-direction: row;
@@ -198,14 +188,12 @@
       max-height: 90vh;
       overflow-y: auto;
     }
-
     .live-clock {
       font-size: 1rem;
       color: #BBDEFB;
       text-align: center;
       margin-bottom: 1rem;
     }
-
     .planner {
       display: flex;
       flex-direction: column;
@@ -222,8 +210,6 @@
       color: #E3F2FD;
       margin-bottom: 0.4rem;
     }
-
-    /* each hour has 4 slots */
     .slot-row {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -259,7 +245,6 @@
       outline: 2px dashed #FFFFFF;
       outline-offset: -2px;
     }
-    /* If empty, show placeholder text. */
     .slot:empty::before {
       content: attr(data-placeholder);
       color: #B3E5FC;
@@ -267,7 +252,7 @@
       opacity: 0.7;
     }
 
-    /*
+    /* 
       =========================================================
       ===============  ACCESSIBILITY & MISC  ==================
       =========================================================
@@ -280,10 +265,6 @@
       clip: rect(1px,1px,1px,1px);
       clip-path: inset(50%);
     }
-
-    /* 
-      If user prefers reduced motion, disable transitions/animations
-    */
     @media (prefers-reduced-motion: reduce) {
       * {
         animation: none !important;
@@ -343,9 +324,7 @@
 
       <!-- RIGHT: PLANNER DECK (TIMELINE + LIVE CLOCK) -->
       <section class="planner-deck" aria-label="Planner Deck">
-        <!-- Live Clock displayed here, at top of right deck -->
         <div class="live-clock" id="liveClock" aria-live="polite">Loading time...</div>
-
         <div class="planner" id="planner"></div>
       </section>
     </div>
@@ -354,189 +333,188 @@
   <!-- ARIA Live Region for announcements -->
   <div id="ariaStatus" aria-live="assertive"></div>
 
+  <!-- Place script at bottom to ensure elements exist first -->
   <script>
-  /************************************************************************
-   * 1. LIVE CLOCK
-   ************************************************************************/
-  const liveClockEl = document.getElementById('liveClock');
-  function updateClock() {
-    const now = new Date();
-    let h = now.getHours();
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    liveClockEl.textContent = \`\${h}:\${m} \${ampm}\`;
-  }
-  updateClock();
-  setInterval(updateClock, 60000);
-
-  /************************************************************************
-   * 2. PLANNER GENERATION
-   *    Timeline: 6:00 AM -> 12:00 AM (24 -> display as 12 AM)
-   ************************************************************************/
-  const startHour = 6;
-  const endHour = 24; // midnight in 24-hour
-  const increments = [0, 15, 30, 45];
-  const plannerEl = document.getElementById('planner');
-
-  function formatTime(hour24, minute) {
-    const hour12 = (hour24 % 12) || 12;
-    const ampm = hour24 < 12 ? 'AM' : 'PM';
-    const minStr = String(minute).padStart(2, '0');
-    return \`\${hour12}:\${minStr} \${ampm}\`;
-  }
-
-  for (let hour = startHour; hour <= endHour; hour++) {
-    const block = document.createElement('div');
-    block.className = 'hour-block';
-
-    const label = document.createElement('div');
-    label.className = 'hour-label';
-    // If hour=24, label as 12:00 AM
-    label.textContent = (hour === 24)
-      ? '12:00 AM'
-      : formatTime(hour, 0);
-
-    block.appendChild(label);
-
-    const slotRow = document.createElement('div');
-    slotRow.className = 'slot-row';
-
-    increments.forEach(min => {
-      const slot = document.createElement('div');
-      slot.className = 'slot';
-      slot.setAttribute('tabindex', '0');
-      const displayTime = (hour === 24) ? formatTime(0, min) : formatTime(hour, min);
-      slot.setAttribute('aria-label', \`\${displayTime} slot, empty\`);
-      slot.setAttribute('data-placeholder', '(Add)');
-
-      slotRow.appendChild(slot);
-    });
-
-    block.appendChild(slotRow);
-    plannerEl.appendChild(block);
-  }
-
-  /************************************************************************
-   * 3. DRAG & DROP WITH POINTER EVENTS
-   ************************************************************************/
-  const tasks = document.querySelectorAll('.draggable-task');
-  const slots = document.querySelectorAll('.slot');
-  const ariaStatus = document.getElementById('ariaStatus');
-
-  let selectedTask = null;    // track the DOM element that is currently picked up
-  let pointerDownId = null;   // track pointer ID
-  let isDragging = false;     // true when pointer is actively dragging
-
-  function announce(msg) {
-    ariaStatus.textContent = msg;
-    setTimeout(() => {
-      ariaStatus.textContent = '';
-    }, 3000);
-  }
-
-  // Helper: place an emoji into a slot
-  function placeEmojiInSlot(slot, emoji) {
-    slot.textContent = emoji;
-    slot.setAttribute('aria-label', slot.getAttribute('aria-label').replace('empty', 'occupied'));
-    // Attempt vibration
-    if (navigator.vibrate) {
-      navigator.vibrate(30);
-    }
-  }
-
-  // tasks: pointerdown -> store selectedTask
-  tasks.forEach(task => {
-    task.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      pointerDownId = e.pointerId;
-      // Toggle selection for tap-to-select
-      if (selectedTask === task) {
-        // If user taps same task again, unselect it
-        selectedTask = null;
-        task.dataset.selected = 'false';
-      } else {
-        // If a different task was selected, unselect it
-        if (selectedTask) {
-          selectedTask.dataset.selected = 'false';
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        /**********************************************************************
+         * LIVE CLOCK
+         *********************************************************************/
+        const liveClockEl = document.getElementById('liveClock');
+        function updateClock() {
+          const now = new Date();
+          let h = now.getHours();
+          const m = String(now.getMinutes()).padStart(2, '0');
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          h = h % 12 || 12;
+          liveClockEl.textContent = \`\${h}:\${m} \${ampm}\`;
         }
-        selectedTask = task;
-        task.dataset.selected = 'true';
-        announce(\`Selected task: \${task.textContent}\`);
-      }
-    });
+        updateClock();
+        setInterval(updateClock, 60000);
 
-    // Additional pointermove/pointerup if we want actual drag motion
-    task.addEventListener('pointermove', e => {
-      if (!selectedTask || e.pointerId !== pointerDownId) return;
-      // We can do a visual drag if desired, but let's keep it simpler for tap-to-drop
-    });
+        /**********************************************************************
+         * PLANNER GENERATION
+         * Timeline: 6:00 AM -> 12:00 AM (24 -> display as 12 AM)
+         *********************************************************************/
+        const startHour = 6;
+        const endHour = 24;
+        const increments = [0, 15, 30, 45];
+        const plannerEl = document.getElementById('planner');
 
-    task.addEventListener('pointerup', e => {
-      if (e.pointerId !== pointerDownId) return;
-      pointerDownId = null;
-      isDragging = false;
-    });
-  });
+        // Double-check the plannerEl exists
+        if (!plannerEl) {
+          console.error('plannerEl not found in DOM!');
+          return;
+        }
 
-  // slots: pointerdown => if we have a selectedTask, place it
-  slots.forEach(slot => {
-    slot.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      if (selectedTask) {
-        // Place the selectedTask's emoji
-        placeEmojiInSlot(slot, selectedTask.textContent);
-        announce(\`Task \${selectedTask.textContent} placed into \${slot.getAttribute('aria-label')}\`);
-        // Unselect the task
-        selectedTask.dataset.selected = 'false';
-        selectedTask = null;
-      }
-    });
+        function formatTime(hour24, minute) {
+          const hour12 = (hour24 % 12) || 12;
+          const ampm = hour24 < 12 ? 'AM' : 'PM';
+          const minStr = String(minute).padStart(2, '0');
+          return \`\${hour12}:\${minStr} \${ampm}\`;
+        }
 
-    // Highlight on pointerenter if we are actually dragging
-    slot.addEventListener('pointerenter', e => {
-      if (isDragging && selectedTask) {
-        slot.setAttribute('data-highlight', 'true');
-      }
-    });
-    slot.addEventListener('pointerleave', e => {
-      slot.setAttribute('data-highlight', 'false');
-    });
-  });
+        for (let hour = startHour; hour <= endHour; hour++) {
+          const block = document.createElement('div');
+          block.className = 'hour-block';
 
-  // Optional: Keyboard fallback for tasks
-  tasks.forEach(task => {
-    task.addEventListener('keydown', e => {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        // Toggle selection
-        if (selectedTask === task) {
-          selectedTask = null;
-          task.dataset.selected = 'false';
-        } else {
-          if (selectedTask) {
-            selectedTask.dataset.selected = 'false';
+          const label = document.createElement('div');
+          label.className = 'hour-label';
+          label.textContent = (hour === 24)
+            ? '12:00 AM'
+            : formatTime(hour, 0);
+          block.appendChild(label);
+
+          const slotRow = document.createElement('div');
+          slotRow.className = 'slot-row';
+
+          increments.forEach(min => {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            slot.setAttribute('tabindex', '0');
+            const displayTime = (hour === 24)
+              ? formatTime(0, min)
+              : formatTime(hour, min);
+            slot.setAttribute('aria-label', \`\${displayTime} slot, empty\`);
+            slot.setAttribute('data-placeholder', '(Add)');
+            slotRow.appendChild(slot);
+          });
+
+          block.appendChild(slotRow);
+          plannerEl.appendChild(block);
+        }
+
+        /**********************************************************************
+         * DRAG & DROP (POINTER + TAP-TO-SELECT)
+         *********************************************************************/
+        const tasks = document.querySelectorAll('.draggable-task');
+        const slots = document.querySelectorAll('.slot');
+        const ariaStatus = document.getElementById('ariaStatus');
+
+        let selectedTask = null;
+        let pointerDownId = null;
+        let isDragging = false;
+
+        function announce(msg) {
+          if (!ariaStatus) return;
+          ariaStatus.textContent = msg;
+          setTimeout(() => { ariaStatus.textContent = ''; }, 3000);
+        }
+
+        function placeEmojiInSlot(slot, emoji) {
+          slot.textContent = emoji;
+          const label = slot.getAttribute('aria-label');
+          if (label && label.includes('empty')) {
+            slot.setAttribute('aria-label', label.replace('empty', 'occupied'));
           }
-          selectedTask = task;
-          task.dataset.selected = 'true';
-          announce(\`Selected task: \${task.textContent}\`);
+          if (navigator.vibrate) navigator.vibrate(30);
         }
-      }
-    });
-  });
 
-  // Slots keyboard drop
-  slots.forEach(slot => {
-    slot.addEventListener('keydown', e => {
-      if ((e.key === ' ' || e.key === 'Enter') && selectedTask) {
-        e.preventDefault();
-        placeEmojiInSlot(slot, selectedTask.textContent);
-        announce(\`Task \${selectedTask.textContent} placed into \${slot.getAttribute('aria-label')}\`);
-        selectedTask.dataset.selected = 'false';
-        selectedTask = null;
+        // Task pointerdown => toggle selection
+        tasks.forEach(task => {
+          task.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            pointerDownId = e.pointerId;
+            if (selectedTask === task) {
+              // Unselect if tapped again
+              selectedTask = null;
+              task.dataset.selected = 'false';
+            } else {
+              // If a different task was selected, unselect it
+              if (selectedTask) {
+                selectedTask.dataset.selected = 'false';
+              }
+              selectedTask = task;
+              task.dataset.selected = 'true';
+              announce(\`Selected task: \${task.textContent}\`);
+            }
+          });
+          // pointermove/pointerup optional for actual drag visuals
+          task.addEventListener('pointerup', e => {
+            if (e.pointerId !== pointerDownId) return;
+            pointerDownId = null;
+            isDragging = false;
+          });
+        });
+
+        // Slot pointerdown => place selected task if any
+        slots.forEach(slot => {
+          slot.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            if (selectedTask) {
+              placeEmojiInSlot(slot, selectedTask.textContent);
+              announce(\`Task \${selectedTask.textContent} placed into \${slot.getAttribute('aria-label')}\`);
+              selectedTask.dataset.selected = 'false';
+              selectedTask = null;
+            }
+          });
+
+          slot.addEventListener('pointerenter', e => {
+            if (isDragging && selectedTask) {
+              slot.setAttribute('data-highlight', 'true');
+            }
+          });
+          slot.addEventListener('pointerleave', e => {
+            slot.setAttribute('data-highlight', 'false');
+          });
+        });
+
+        // Keyboard fallback
+        tasks.forEach(task => {
+          task.addEventListener('keydown', e => {
+            if (e.key === ' ' || e.key === 'Enter') {
+              e.preventDefault();
+              if (selectedTask === task) {
+                // Unselect
+                selectedTask = null;
+                task.dataset.selected = 'false';
+              } else {
+                if (selectedTask) selectedTask.dataset.selected = 'false';
+                selectedTask = task;
+                task.dataset.selected = 'true';
+                announce(\`Selected task: \${task.textContent}\`);
+              }
+            }
+          });
+        });
+        slots.forEach(slot => {
+          slot.addEventListener('keydown', e => {
+            if ((e.key === ' ' || e.key === 'Enter') && selectedTask) {
+              e.preventDefault();
+              placeEmojiInSlot(slot, selectedTask.textContent);
+              announce(\`Task \${selectedTask.textContent} placed into \${slot.getAttribute('aria-label')}\`);
+              selectedTask.dataset.selected = 'false';
+              selectedTask = null;
+            }
+          });
+        });
+
+        console.log('Planner setup complete. No errors encountered.');
+      } catch (err) {
+        console.error('Error in planner setup:', err);
+        alert('Planner encountered an error. Check console for details.');
       }
     });
-  });
   </script>
 </body>
 </html>
