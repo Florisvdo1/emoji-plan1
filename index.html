@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Emoji Planner for Autism (Refined Layout)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <style>
+    /* 
+      =========================================================
+      ===============  GLOBAL & RESET STYLES  =================
+      =========================================================
+    */
+    html, body {
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box;
+      height: 100%; 
+      width: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+                   Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+      color: #FFFFFF;
+      background: #003366; /* fallback for gradient background */
+    }
+    *, *::before, *::after {
+      box-sizing: inherit;
+    }
+
+    /* 
+      =========================================================
+      ===============  CLOUD BACKGROUND ANIMATION  ============
+      =========================================================
+      We'll create a dark blue gradient sky with drifting clouds.
+    */
+    body {
+      /* For iPhones with notches (iPhone X+), use safe-area insets to ensure content isn't hidden. */
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      background: linear-gradient(to bottom, #001F4D 0%, #003366 80%, #003366 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Cloud container + Clouds: We'll animate them horizontally. */
+    .cloud-container {
+      position: fixed;
+      top: 0; 
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1; /* behind the planner content */
+      overflow: hidden;
+      pointer-events: none; 
+    }
+
+    .cloud {
+      position: absolute;
+      top: 0;
+      width: 256px; 
+      height: 256px;
+      background: url('data:image/svg+xml;utf8,<svg width=\"256\" height=\"256\" viewBox=\"0 0 64 64\" xmlns=\"http://www.w3.org/2000/svg\"><g fill=\"%23FFFFFF\"><path d=\"M18.7 22.9c-2.8-6.3 2.2-11 6.7-13.5 5.8-3.1 14.3-2.7 19 1.1 8.5 6.7 3.4 18.9 3.4 18.9l-7 .8-1.3 1.3s-4.9 4.8-10.2 2.6c-3.8-1.5-2.5-4.8-2.5-4.8s-.4-1.4-1.4-1.3c-1 .1-2.3 2.2-2.3 2.2s-5.8 1.2-4.4-7.3z\"/><circle cx=\"24\" cy=\"42\" r=\"6\"/><circle cx=\"32\" cy=\"48\" r=\"8\"/><circle cx=\"40\" cy=\"44\" r=\"7\"/><circle cx=\"45\" cy=\"50\" r=\"5\"/></g></svg>') center/contain no-repeat;
+      opacity: 0.7;
+      animation: driftClouds 60s linear infinite;
+    }
+
+    @keyframes driftClouds {
+      0% {
+        transform: translateX(-20%) translateY(10%);
+      }
+      100% {
+        transform: translateX(120%) translateY(10%);
+      }
+    }
+
+    /* We can vary the animation speed & initial positions by using nth-child or inline style. */
+    .cloud:nth-child(1) {
+      top: 20%; 
+      left: -25%;
+      transform: scale(1.2);
+      animation-duration: 90s;
+    }
+    .cloud:nth-child(2) {
+      top: 50%; 
+      left: -50%;
+      transform: scale(1.0);
+      animation-duration: 120s;
+    }
+    .cloud:nth-child(3) {
+      top: 70%; 
+      left: -60%;
+      transform: scale(1.4);
+      animation-duration: 75s;
+    }
+
+    /* 
+      =========================================================
+      ===============  CONTAINER & LAYOUT  ====================
+      =========================================================
+    */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding-bottom: 2rem; /* space for bottom safe area on iPhone */
+    }
+
+    .content {
+      display: flex;
+      flex-direction: row;
+      gap: 1rem;
+      width: 100%;
+      padding: 1rem;
+      box-sizing: border-box;
+      flex: 1;
+    }
+    @media (max-width: 800px) {
+      .content {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+    /*
+      =========================================================
+      ===============  TASK DECK (LEFT)  ======================
+      =========================================================
+    */
+    .tasks-deck {
+      flex: 1;
+      max-width: 320px;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(4px);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 80vh; /* so it can scroll on tall content */
+    }
+    .tasks-deck h2 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+      text-align: center;
+      color: #FFFFFF;
+    }
+    .task-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .draggable-task {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 1.5rem;
+      color: #FFFFFF;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .draggable-task:active {
+      transform: scale(1.05);
+    }
+    .draggable-task[data-selected="true"] {
+      box-shadow: 0 0 8px 2px rgba(255,255,255,0.5);
+      transform: scale(1.1);
+    }
+    .draggable-task:focus {
+      outline: 2px dashed #FFFFFF;
+      outline-offset: 2px;
+    }
+
+    /*
+      =========================================================
+      ===============  PLANNER DECK (RIGHT)  ==================
+      =========================================================
+    */
+    .planner-deck {
+      flex: 3;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(6px);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 1rem;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .live-clock {
+      font-size: 1rem;
+      color: #BBDEFB;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .planner {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .hour-block {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      padding: 0.5rem;
+    }
+    .hour-label {
+      font-weight: bold;
+      color: #E3F2FD;
+      margin-bottom: 0.4rem;
+    }
+
+    /* each hour has 4 slots */
+    .slot-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+    @media (max-width: 500px) {
+      .slot-row {
+        grid-template-columns: repeat(2, 1fr);
+        grid-row-gap: 0.5rem;
+      }
+    }
+    .slot {
+      width: 100%;
+      height: 60px;
+      background: rgba(255,255,255,0.1);
+      border: 1px dashed rgba(255,255,255,0.4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #FFFFFF;
+      font-size: 1.3rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      position: relative;
+    }
+    .slot[data-highlight="true"] {
+      box-shadow: 0 0 10px 2px rgba(255,255,255,0.7);
+      transform: scale(1.02);
+    }
+    .slot:focus {
+      outline: 2px dashed #FFFFFF;
+      outline-offset: -2px;
+    }
+    /* If empty, show placeholder text. */
+    .slot:empty::before {
+      content: attr(data-placeholder);
+      color: #B3E5FC;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+
+    /*
+      =========================================================
+      ===============  ACCESSIBILITY & MISC  ==================
+      =========================================================
+    */
+    [aria-live] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(1px,1px,1px,1px);
+      clip-path: inset(50%);
+    }
+
+    /* 
+      If user prefers reduced motion, disable transitions/animations
+    */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Cloud Background -->
+  <div class="cloud-container">
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="app-container">
+    <div class="content">
+      <!-- LEFT: TASK DECK -->
+      <section class="tasks-deck" aria-label="Task Deck">
+        <h2>Task Library</h2>
+        <div class="task-list" id="taskList">
+          <!-- 30+ event-related emojis -->
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Breakfast 🍳">🍳</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Exercise 🤸">🤸</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Break 🧩">🧩</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Reading 📚">📚</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Study 📝">📝</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Car Ride 🚗">🚗</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Birthday Party 🎂">🎂</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Restaurant 🍽️">🍽️</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: School 🏫">🏫</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Hospital 🏥">🏥</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Shopping 🛒">🛒</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Soccer ⚽">⚽</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Art 🎨">🎨</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Music 🎵">🎵</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Bedtime 🛏️">🛏️</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Brush Teeth 🪥">🪥</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Phone Call 📞">📞</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Relaxation 🧘">🧘</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Pet Care 🐶">🐶</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Gardening 🌱">🌱</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Movie Time 🎥">🎥</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Bath 🛀">🛀</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Pool 🏊">🏊</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Picnic 🧺">🧺</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Work 💼">💼</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Meeting 📅">📅</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Train Ride 🚆">🚆</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Flight ✈️">✈️</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Meditation 🕉️">🕉️</div>
+          <div class="draggable-task" tabindex="0" aria-label="Draggable: Video Game 🎮">🎮</div>
+        </div>
+      </section>
+
+      <!-- RIGHT: PLANNER DECK (TIMELINE + LIVE CLOCK) -->
+      <section class="planner-deck" aria-label="Planner Deck">
+        <!-- Live Clock displayed here, at top of right deck -->
+        <div class="live-clock" id="liveClock" aria-live="polite">Loading time...</div>
+
+        <div class="planner" id="planner"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ARIA Live Region for announcements -->
+  <div id="ariaStatus" aria-live="assertive"></div>
+
+  <script>
+  /************************************************************************
+   * 1. LIVE CLOCK
+   ************************************************************************/
+  const liveClockEl = document.getElementById('liveClock');
+  function updateClock() {
+    const now = new Date();
+    let h = now.getHours();
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    liveClockEl.textContent = \`\${h}:\${m} \${ampm}\`;
+  }
+  updateClock();
+  setInterval(updateClock, 60000);
+
+  /************************************************************************
+   * 2. PLANNER GENERATION
+   *    Timeline: 6:00 AM -> 12:00 AM (24 -> display as 12 AM)
+   ************************************************************************/
+  const startHour = 6;
+  const endHour = 24; // midnight in 24-hour
+  const increments = [0, 15, 30, 45];
+  const plannerEl = document.getElementById('planner');
+
+  function formatTime(hour24, minute) {
+    const hour12 = (hour24 % 12) || 12;
+    const ampm = hour24 < 12 ? 'AM' : 'PM';
+    const minStr = String(minute).padStart(2, '0');
+    return \`\${hour12}:\${minStr} \${ampm}\`;
+  }
+
+  for (let hour = startHour; hour <= endHour; hour++) {
+    const block = document.createElement('div');
+    block.className = 'hour-block';
+
+    const label = document.createElement('div');
+    label.className = 'hour-label';
+    // If hour=24, label as 12:00 AM
+    label.textContent = (hour === 24)
+      ? '12:00 AM'
+      : formatTime(hour, 0);
+
+    block.appendChild(label);
+
+    const slotRow = document.createElement('div');
+    slotRow.className = 'slot-row';
+
+    increments.forEach(min => {
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.setAttribute('tabindex', '0');
+      const displayTime = (hour === 24) ? formatTime(0, min) : formatTime(hour, min);
+      slot.setAttribute('aria-label', \`\${displayTime} slot, empty\`);
+      slot.setAttribute('data-placeholder', '(Add)');
+
+      slotRow.appendChild(slot);
+    });
+
+    block.appendChild(slotRow);
+    plannerEl.appendChild(block);
+  }
+
+  /************************************************************************
+   * 3. DRAG & DROP WITH POINTER EVENTS
+   ************************************************************************/
+  const tasks = document.querySelectorAll('.draggable-task');
+  const slots = document.querySelectorAll('.slot');
+  const ariaStatus = document.getElementById('ariaStatus');
+
+  let selectedTask = null;    // track the DOM element that is currently picked up
+  let pointerDownId = null;   // track pointer ID
+  let isDragging = false;     // true when pointer is actively dragging
+
+  function announce(msg) {
+    ariaStatus.textContent = msg;
+    setTimeout(() => {
+      ariaStatus.textContent = '';
+    }, 3000);
+  }
+
+  // Helper: place an emoji into a slot
+  function placeEmojiInSlot(slot, emoji) {
+    slot.textContent = emoji;
+    slot.setAttribute('aria-label', slot.getAttribute('aria-label').replace('empty', 'occupied'));
+    // Attempt vibration
+    if (navigator.vibrate) {
+      navigator.vibrate(30);
+    }
+  }
+
+  // tasks: pointerdown -> store selectedTask
+  tasks.forEach(task => {
+    task.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      pointerDownId = e.pointerId;
+      // Toggle selection for tap-to-select
+      if (selectedTask === task) {
+        // If user taps same task again, unselect it
+        selectedTask = null;
+        task.dataset.selected = 'false';
+      } else {
+        // If a different task was selected, unselect it
+        if (selectedTask) {
+          selectedTask.dataset.selected = 'false';
+        }
+        selectedTask = task;
+        task.dataset.selected = 'true';
+        announce(\`Selected task: \${task.textContent}\`);
+      }
+    });
+
+    // Additional pointermove/pointerup if we want actual drag motion
+    task.addEventListener('pointermove', e => {
+      if (!selectedTask || e.pointerId !== pointerDownId) return;
+      // We can do a visual drag if desired, but let's keep it simpler for tap-to-drop
+    });
+
+    task.addEventListener('pointerup', e => {
+      if (e.pointerId !== pointerDownId) return;
+      pointerDownId = null;
+      isDragging = false;
+    });
+  });
+
+  // slots: pointerdown => if we have a selectedTask, place it
+  slots.forEach(slot => {
+    slot.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (selectedTask) {
+        // Place the selectedTask's emoji
+        placeEmojiInSlot(slot, selectedTask.textContent);
+        announce(\`Task \${selectedTask.textContent} placed into \${slot.getAttribute('aria-label')}\`);
+        // Unselect the task
+        selectedTask.dataset.selected = 'false';
+        selectedTask = null;
+      }
+    });
+
+    // Highlight on pointerenter if we are actually dragging
+    slot.addEventListener('pointerenter', e => {
+      if (isDragging && selectedTask) {
+        slot.setAttribute('data-highlight', 'true');
+      }
+    });
+    slot.addEventListener('pointerleave', e => {
+      slot.setAttribute('data-highlight', 'false');
+    });
+  });
+
+  // Optional: Keyboard fallback for tasks
+  tasks.forEach(task => {
+    task.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        // Toggle selection
+        if (selectedTask === task) {
+          selectedTask = null;
+          task.dataset.selected = 'false';
+        } else {
+          if (selectedTask) {
+            selectedTask.dataset.selected = 'false';
+          }
+          selectedTask = task;
+          task.dataset.selected = 'true';
+          announce(\`Selected task: \${task.textContent}\`);
+        }
+      }
+    });
+  });
+
+  // Slots keyboard drop
+  slots.forEach(slot => {
+    slot.addEventListener('keydown', e => {
+      if ((e.key === ' ' || e.key === 'Enter') && selectedTask) {
+        e.preventDefault();
+        placeEmojiInSlot(slot, selectedTask.textContent);
+        announce(\`Task \${selectedTask.textContent} placed into \${slot.getAttribute('aria-label')}\`);
+        selectedTask.dataset.selected = 'false';
+        selectedTask = null;
+      }
+    });
+  });
+  </script>
+</body>
+</html>
